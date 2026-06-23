@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦖 Rexy Badge Quest | TREX Chain</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: #0a0a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+        }
+        .game-wrapper {
+            background: linear-gradient(145deg, #1a1a2e, #0f0f23);
+            border-radius: 32px;
+            padding: 24px 32px 32px;
+            box-shadow: 0 20px 60px rgba(34, 197, 94, 0.15), inset 0 1px 0 rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.08);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 8px 16px 8px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4ade80, #22c55e, #16a34a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 40px rgba(34, 197, 94, 0.2);
+            letter-spacing: 0.5px;
+        }
+        .stats {
+            display: flex;
+            gap: 28px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 8px 20px;
+            border-radius: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .stats span {
+            color: #4ade80;
+            font-weight: 800;
+            min-width: 30px;
+            display: inline-block;
+        }
+        .stats .best-label {
+            color: #facc15;
+        }
+        .stats .best-label span {
+            color: #facc15;
+        }
+        canvas {
+            display: block;
+            width: 1000px;
+            max-width: 100%;
+            height: auto;
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(34, 197, 94, 0.06), inset 0 0 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(34, 197, 94, 0.12);
+            cursor: pointer;
+            touch-action: none;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .hint {
+            color: #94a3b8;
+            font-size: 15px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+        .hint kbd {
+            background: rgba(255, 255, 255, 0.07);
+            padding: 4px 14px;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .btn-restart {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #0a0a1a;
+            border: none;
+            padding: 10px 28px;
+            border-radius: 60px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.25);
+            letter-spacing: 0.3px;
+        }
+        .btn-restart:hover {
+            transform: scale(1.04);
+            box-shadow: 0 6px 30px rgba(34, 197, 94, 0.35);
+        }
+        .btn-restart:active {
+            transform: scale(0.96);
+        }
+
+        @media (max-width: 700px) {
+            .game-wrapper { padding: 16px; }
+            .header { flex-direction: column; align-items: stretch; gap: 8px; }
+            .title { font-size: 22px; text-align: center; }
+            .stats { justify-content: center; font-size: 16px; padding: 6px 14px; }
+            .controls { flex-direction: column; align-items: stretch; }
+            .hint { justify-content: center; font-size: 13px; }
+            .btn-restart { padding: 12px; font-size: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="header">
+            <div class="title">🦖 Rexy Badge Quest</div>
+            <div class="stats">
+                <div>🏆 <span id="score">0</span></div>
+                <div class="best-label">⭐ <span id="highscore">0</span></div>
+            </div>
+        </div>
+
+        <canvas id="game" width="1000" height="420"></canvas>
+
+        <div class="controls">
+            <div class="hint">
+                <kbd>Space</kbd> <kbd>↑</kbd> <span style="color:#e2e8f0;">Jump / Double Jump</span>
+                <span style="opacity:0.4;">|</span>
+                <span style="color:#94a3b8;">🖱 Click / Tap</span>
+            </div>
+            <button class="btn-restart" id="restartBtn">⟳ Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // ─── SETUP ─────────────────────────────────────────────
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const highscoreEl = document.getElementById('highscore');
+
+        // ─── DINOSAUR IMAGE ───────────────────────────────────
+        const dinoImg = new Image();
+        dinoImg.src = 'https://images.imgbox.com/8b/78/uYI08rGv_o.png';
+
+        // ─── STATE ─────────────────────────────────────────────
+        let dino = { x: 75, y: 270, dy: 0, w: 100, h: 135 };
+        let game = {
+            started: false,
+            over: false,
+            frame: 0,
+            score: 0,
+            highscore: parseInt(localStorage.getItem('trexHigh')) || 0,
+            speed: 5.5,                // начальная скорость меньше
+            gravity: 0.6,
+            jumpPower: -14.0,
+            doubleJumpPower: -11.0,
+        };
+        let isInAir = false;
+        let canDoubleJump = true;
+        let obstacles = [];
+        let badges = [];
+        let particles = [];
+        let stars = [];
+        let clouds = [];
+        let grassTufts = [];
+
+        // ─── HIGHSCORE ─────────────────────────────────────────
+        highscoreEl.textContent = game.highscore;
+
+        // ─── HELPERS ───────────────────────────────────────────
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+        function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+
+        // ─── BADGE DEFINITIONS (15 штук) ──────────────────────
+        const badgeList = [
+            { text: 'EARLY BIRD', color: '#67e8f9', value: 35, icon: '🐦' },
+            { text: 'REXY HOLDER', color: '#4ade80', value: 40, icon: '🦖' },
+            { text: 'GRAND TRADER', color: '#fcd34d', value: 60, icon: '👑' },
+            { text: 'DIAMOND HAND', color: '#fb923c', value: 50, icon: '💎' },
+            { text: 'LIMITLESS', color: '#c084fc', value: 45, icon: '♾️' },
+            { text: 'CHAIN EXPLORER', color: '#60a5fa', value: 30, icon: '🔍' },
+            { text: 'SOCIAL BEAST', color: '#f472b6', value: 25, icon: '🐾' },
+            { text: 'EARLY ADOPTER', color: '#fbbf24', value: 55, icon: '🌟' },
+            { text: 'COMMUNITY BUILDER', color: '#34d399', value: 35, icon: '🏗️' },
+            { text: 'TESTNET PIONEER', color: '#a78bfa', value: 40, icon: '🧪' },
+            { text: 'DEX MASTER', color: '#f87171', value: 50, icon: '🔄' },
+            { text: 'VALIDATOR', color: '#fcd34d', value: 65, icon: '⚡' },
+            { text: 'NFT COLLECTOR', color: '#e879f9', value: 45, icon: '🖼️' },
+            { text: 'GAS GUARDIAN', color: '#fb923c', value: 30, icon: '⛽' },
+            { text: 'STAKER', color: '#34d399', value: 55, icon: '🏦' },
+        ];
+
+        // ─── INIT BACKGROUND ──────────────────────────────────
+        function initBackground() {
+            stars = [];
+            for (let i = 0; i < 45; i++) {
+                stars.push({
+                    x: rand(0, 1000),
+                    y: rand(0, 280),
+                    size: rand(0.5, 2.2),
+                    speed: rand(0.005, 0.025),
+                    phase: rand(0, Math.PI * 2)
+                });
+            }
+            clouds = [];
+            for (let i = 0; i < 6; i++) {
+                clouds.push({
+                    x: rand(-200, 1000),
+                    y: rand(10, 160),
+                    w: rand(60, 180),
+                    h: rand(20, 50),
+                    speed: rand(0.15, 0.4),
+                    opacity: rand(0.04, 0.12)
+                });
+            }
+            grassTufts = [];
+            for (let i = 0; i < 60; i++) {
+                grassTufts.push({
+                    x: rand(0, 1000),
+                    h: rand(8, 22),
+                    phase: rand(0, Math.PI * 2),
+                    speed: rand(0.02, 0.06)
+                });
+            }
+        }
+        initBackground();
+
+        // ─── SPAWN FUNCTIONS ──────────────────────────────────
+        let lastObstacleX = -300;
+        let lastBadgeX = -200;
+
+        const obstacleTypes = ['cactus', 'egg', 'gas', 'fake', 'rock', 'log', 'trap'];
+
+        function spawnObstacle() {
+            // реже и с большим интервалом
+            if (Math.random() < 0.022 && (1000 - lastObstacleX) > 420) {
+                const type = obstacleTypes[randInt(0, obstacleTypes.length - 1)];
+                obstacles.push({
+                    x: 1050,
+                    type: type,
+                    w: type === 'egg' ? 56 : type === 'log' ? 70 : 56,
+                    h: type === 'egg' ? 76 : type === 'rock' ? 60 : type === 'log' ? 50 : 90,
+                    animPhase: rand(0, Math.PI * 2),
+                    variant: randInt(0, 2)
+                });
+                lastObstacleX = 1050;
+            }
+        }
+
+        function spawnBadge() {
+            if (Math.random() < 0.40 && (1000 - lastBadgeX) > 200) {
+                const b = badgeList[randInt(0, badgeList.length - 1)];
+                const yBase = 140 + rand(0, 180);
+                badges.push({
+                    x: 1050,
+                    y: yBase,
+                    ...b,
+                    w: 80,
+                    h: 48,
+                    bobPhase: rand(0, Math.PI * 2),
+                    glowPulse: rand(0, 2)
+                });
+                lastBadgeX = 1050;
+            }
+        }
+
+        // ─── JUMP ──────────────────────────────────────────────
+        function performJump() {
+            if (game.over) {
+                resetGame();
+                return;
+            }
+            if (!game.started) {
+                game.started = true;
+            }
+            if (!isInAir) {
+                dino.dy = game.jumpPower;
+                isInAir = true;
+                canDoubleJump = true;
+                spawnJumpParticles();
+            } else if (canDoubleJump) {
+                dino.dy = game.doubleJumpPower;
+                canDoubleJump = false;
+                spawnJumpParticles();
+            }
+        }
+
+        function spawnJumpParticles() {
+            for (let i = 0; i < 12; i++) {
+                particles.push({
+                    x: dino.x + 50 + rand(-10, 10),
+                    y: dino.y + 90 + rand(-5, 5),
+                    vx: rand(-2.5, 2.5),
+                    vy: rand(-3, -0.5),
+                    life: rand(15, 30),
+                    maxLife: 30,
+                    size: rand(3, 8),
+                    color: `hsl(${randInt(120, 160)}, 80%, ${randInt(50, 80)}%)`,
+                    type: 'jump'
+                });
+            }
+        }
+
+        // ─── UPDATE ────────────────────────────────────────────
+        function update() {
+            if (!game.started || game.over) return;
+
+            game.frame++;
+
+            // Score
+            game.score += 0.6;
+            scoreEl.textContent = Math.floor(game.score);
+
+            // Speed increases slower
+            game.speed = 5.5 + Math.floor(game.score / 500) * 0.3; // медленнее
+
+            // Dino physics
+            dino.dy += game.gravity;
+            dino.y += dino.dy;
+            if (dino.y >= 270) {
+                dino.y = 270;
+                dino.dy = 0;
+                isInAir = false;
+                canDoubleJump = true;
+            }
+
+            // ── Obstacles ──
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const o = obstacles[i];
+                o.x -= game.speed;
+                o.animPhase += 0.03;
+
+                const shake = Math.sin(o.animPhase * 2) * 1;
+
+                // Улучшенный hitbox — уже и ниже
+                const dinoBox = {
+                    x: dino.x + 25,
+                    y: dino.y + 20,
+                    w: 50,
+                    h: 85
+                };
+                const obBox = {
+                    x: o.x + 8,
+                    y: 280 + (o.type === 'egg' ? 0 : o.type === 'log' ? -5 : o.type === 'rock' ? 10 : o.type === 'gas' ? -15 : 0) + shake,
+                    w: o.w - 16,
+                    h: o.h - 12
+                };
+
+                if (dinoBox.x < obBox.x + obBox.w &&
+                    dinoBox.x + dinoBox.w > obBox.x &&
+                    dinoBox.y < obBox.y + obBox.h &&
+                    dinoBox.y + dinoBox.h > obBox.y) {
+                    gameOver();
+                }
+
+                if (o.x < -80) obstacles.splice(i, 1);
+            }
+
+            if (obstacles.length) lastObstacleX = obstacles[obstacles.length - 1].x;
+            else lastObstacleX = -300;
+
+            // ── Badges ──
+            for (let i = badges.length - 1; i >= 0; i--) {
+                const b = badges[i];
+                b.x -= game.speed * 0.9;
+                b.bobPhase += 0.04;
+                b.y += Math.sin(b.bobPhase) * 0.15;
+                b.glowPulse = 0.8 + Math.sin(b.bobPhase * 1.3) * 0.2;
+
+                const dx = (b.x + b.w/2) - (dino.x + 50);
+                const dy = (b.y + b.h/2) - (dino.y + 45);
+                if (Math.abs(dx) < 70 && Math.abs(dy) < 70) {
+                    game.score += b.value;
+                    scoreEl.textContent = Math.floor(game.score);
+
+                    for (let j = 0; j < 25; j++) {
+                        particles.push({
+                            x: b.x + b.w/2,
+                            y: b.y + b.h/2,
+                            vx: rand(-5, 5),
+                            vy: rand(-6, 2),
+                            life: rand(20, 45),
+                            maxLife: 45,
+                            size: rand(4, 12),
+                            color: b.color,
+                            type: 'badge',
+                            text: '+' + b.value + ' ' + b.icon
+                        });
+                    }
+                    badges.splice(i, 1);
+                    continue;
+                }
+
+                if (b.x < -120) badges.splice(i, 1);
+            }
+
+            if (badges.length) lastBadgeX = badges[badges.length - 1].x;
+            else lastBadgeX = -200;
+
+            // ── Spawn ──
+            spawnObstacle();
+            spawnBadge();
+
+            // ── Particles ──
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx || 0;
+                p.y += p.vy || 0;
+                if (p.vy !== undefined) p.vy += 0.08;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // ── Clouds ──
+            for (const c of clouds) {
+                c.x += c.speed * (game.speed / 5.5) * 0.3;
+                if (c.x > 1100) { c.x = -c.w - rand(20, 100);
+                    c.y = rand(10, 160); }
+            }
+        }
+
+        // ─── GAME OVER ─────────────────────────────────────────
+        function gameOver() {
+            if (game.over) return;
+            game.over = true;
+            const finalScore = Math.floor(game.score);
+            if (finalScore > game.highscore) {
+                game.highscore = finalScore;
+                localStorage.setItem('trexHigh', game.highscore);
+                highscoreEl.textContent = game.highscore;
+            }
+            for (let i = 0; i < 40; i++) {
+                particles.push({
+                    x: dino.x + 50 + rand(-20, 20),
+                    y: dino.y + 45 + rand(-20, 20),
+                    vx: rand(-7, 7),
+                    vy: rand(-8, 3),
+                    life: rand(20, 50),
+                    maxLife: 50,
+                    size: rand(3, 10),
+                    color: `hsl(${randInt(0, 40)}, 90%, ${randInt(50, 80)}%)`,
+                    type: 'death'
+                });
+            }
+        }
+
+        function resetGame() {
+            game.over = false;
+            game.started = true;
+            game.frame = 0;
+            game.score = 0;
+            game.speed = 5.5;
+            dino.y = 270;
+            dino.dy = 0;
+            isInAir = false;
+            canDoubleJump = true;
+            obstacles = [];
+            badges = [];
+            particles = [];
+            lastObstacleX = -300;
+            lastBadgeX = -200;
+            scoreEl.textContent = '0';
+        }
+
+        // ─── DRAW ──────────────────────────────────────────────
+        function draw() {
+            ctx.clearRect(0, 0, 1000, 420);
+
+            // ── Sky gradient ──
+            const sky = ctx.createLinearGradient(0, 0, 0, 420);
+            sky.addColorStop(0, '#0f172a');
+            sky.addColorStop(0.25, '#1a2e3f');
+            sky.addColorStop(0.5, '#2d5a3f');
+            sky.addColorStop(0.75, '#3a7a4f');
+            sky.addColorStop(1, '#1e4a2f');
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, 1000, 420);
+
+            // ── Stars ──
+            for (const s of stars) {
+                const brightness = 0.3 + Math.sin(game.frame * s.speed + s.phase) * 0.3;
+                ctx.globalAlpha = brightness * 0.8;
+                ctx.fillStyle = '#fef08c';
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // ── Clouds ──
+            for (const c of clouds) {
+                ctx.globalAlpha = c.opacity;
+                ctx.fillStyle = '#e2e8f0';
+                ctx.beginPath();
+                ctx.ellipse(c.x, c.y, c.w / 2, c.h / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(c.x - c.w * 0.3, c.y + 8, c.w * 0.3, c.h * 0.4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(c.x + c.w * 0.3, c.y + 6, c.w * 0.25, c.h * 0.35, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // ── Ground ──
+            const ground = ctx.createLinearGradient(0, 370, 0, 420);
+            ground.addColorStop(0, '#2d6a3f');
+            ground.addColorStop(0.3, '#1e4a2f');
+            ground.addColorStop(1, '#0f2a1a');
+            ctx.fillStyle = ground;
+            ctx.fillRect(0, 370, 1000, 50);
+
+            // Ground line glow
+            ctx.shadowColor = '#4ade80';
+            ctx.shadowBlur = 20;
+            ctx.strokeStyle = 'rgba(74, 222, 128, 0.15)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 370);
+            ctx.lineTo(1000, 370);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // ── Grass ──
+            for (const g of grassTufts) {
+                const sway = Math.sin(game.frame * g.speed + g.phase) * 4;
+                ctx.strokeStyle = `hsla(${130 + g.phase * 5}, 70%, ${45 + g.h * 0.5}%, 0.6)`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(g.x, 370);
+                ctx.quadraticCurveTo(g.x + sway, 370 - g.h, g.x + sway * 0.5, 370);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(g.x + 6, 370);
+                ctx.quadraticCurveTo(g.x + 6 + sway * 0.7, 370 - g.h * 0.7, g.x + 6 + sway * 0.3, 370);
+                ctx.stroke();
+            }
+
+            // ── Большой полупрозрачный логотип ──
+            ctx.globalAlpha = 0.07;
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 72px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('TREX_chain', 500, 140);
+            ctx.font = 'bold 48px Arial';
+            ctx.fillText('Badge Quest', 500, 210);
+            ctx.globalAlpha = 1;
+
+            // ── Badges ──
+            for (const b of badges) {
+                const bobY = Math.sin(b.bobPhase) * 4;
+
+                ctx.shadowColor = b.color;
+                ctx.shadowBlur = 40 * b.glowPulse;
+
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                ctx.beginPath();
+                ctx.roundRect(b.x, b.y - 8 + bobY, b.w, b.h, 14);
+                ctx.fill();
+
+                ctx.strokeStyle = b.color;
+                ctx.lineWidth = 2.5;
+                ctx.shadowBlur = 20 * b.glowPulse;
+                ctx.beginPath();
+                ctx.roundRect(b.x, b.y - 8 + bobY, b.w, b.h, 14);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(b.text, b.x + b.w/2, b.y + 2 + bobY);
+
+                ctx.fillStyle = b.color;
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText(b.icon + ' +' + b.value, b.x + b.w/2, b.y + 26 + bobY);
+            }
+            ctx.shadowBlur = 0;
+
+            // ── Obstacles ──
+            for (const o of obstacles) {
+                drawObstacle(o);
+            }
+
+            // ── Dino ──
+            ctx.shadowColor = '#4ade80';
+            ctx.shadowBlur = 30;
+            ctx.drawImage(dinoImg, dino.x, dino.y - 40, dino.w, dino.h);
+            ctx.shadowBlur = 0;
+
+            // ── Particles ──
+            for (const p of particles) {
+                const alpha = p.life / p.maxLife;
+                ctx.globalAlpha = alpha;
+                if (p.type === 'badge' && p.text) {
+                    ctx.fillStyle = p.color || '#facc15';
+                    ctx.font = 'bold 26px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowColor = p.color || '#facc15';
+                    ctx.shadowBlur = 30;
+                    ctx.fillText(p.text, p.x, p.y);
+                    ctx.shadowBlur = 0;
+                } else {
+                    ctx.fillStyle = p.color || '#4ade80';
+                    ctx.shadowColor = p.color || '#4ade80';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+            ctx.globalAlpha = 1;
+
+            // ── Start screen ──
+            if (!game.started) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0, 0, 1000, 420);
+                ctx.shadowColor = '#4ade80';
+                ctx.shadowBlur = 40;
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 52px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🦖 Press Space', 500, 180);
+                ctx.font = '24px Arial';
+                ctx.fillStyle = '#94a3b8';
+                ctx.shadowBlur = 10;
+                ctx.fillText('Collect TREX Chain badges!', 500, 240);
+                ctx.shadowBlur = 0;
+            }
+
+            // ── Game Over overlay ──
+            if (game.over) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, 1000, 420);
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 50;
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 64px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('💀 GAME OVER', 500, 160);
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#4ade80';
+                ctx.font = '28px Arial';
+                ctx.fillText('Score: ' + Math.floor(game.score), 500, 220);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '18px Arial';
+                ctx.fillText('Press Space / Click to restart', 500, 280);
+            }
+
+            // Маленький водяной знак
+            ctx.globalAlpha = 0.06;
+            ctx.fillStyle = '#4ade80';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('⚡ TREX', 980, 410);
+            ctx.globalAlpha = 1;
+        }
+
+        // ─── DRAW OBSTACLE (С УЛУЧШЕННЫМИ ПОДПИСЯМИ) ──────────
+        function drawObstacle(o) {
+            ctx.save();
+
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetY = 4;
+
+            // Переменные для подписи
+            let labelX = 0, labelY = 0, labelText = '', labelW = 0;
+
+            if (o.type === 'cactus') {
+                const grad = ctx.createLinearGradient(o.x, 260, o.x + 50, 370);
+                grad.addColorStop(0, '#22c55e');
+                grad.addColorStop(0.4, '#15803d');
+                grad.addColorStop(1, '#166534');
+                ctx.fillStyle = grad;
+                ctx.shadowColor = '#22c55e';
+                ctx.shadowBlur = 25;
+                ctx.beginPath();
+                ctx.roundRect(o.x + 8, 260, 34, 110, 6);
+                ctx.fill();
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#4ade80';
+                for (let i = 0; i < 5; i++) {
+                    const sy = 275 + i * 22 + Math.sin(o.animPhase + i) * 3;
+                    ctx.fillRect(o.x + 2, sy, 8, 4);
+                    ctx.fillRect(o.x + 40, sy + 4, 8, 4);
+                }
+                ctx.shadowColor = '#facc15';
+                ctx.shadowBlur = 30;
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.arc(o.x + 18, 290 + Math.sin(o.animPhase) * 2, 6, 0, Math.PI * 2);
+                ctx.arc(o.x + 34, 290 + Math.sin(o.animPhase + 1) * 2, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#1a1a2e';
+                ctx.beginPath();
+                ctx.arc(o.x + 16, 288 + Math.sin(o.animPhase) * 2, 3, 0, Math.PI * 2);
+                ctx.arc(o.x + 32, 288 + Math.sin(o.animPhase + 1) * 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+                labelX = o.x + 26;
+                labelY = 375;
+                labelText = '🌵 CACTUS';
+                labelW = 80;
+
+            } else if (o.type === 'egg') {
+                const grad = ctx.createRadialGradient(o.x + 20, 290, 8, o.x + 28, 315, 40);
+                grad.addColorStop(0, '#fef3c7');
+                grad.addColorStop(0.5, '#fbbf24');
+                grad.addColorStop(0.8, '#d97706');
+                grad.addColorStop(1, '#92400e');
+                ctx.fillStyle = grad;
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 35;
+                ctx.beginPath();
+                ctx.ellipse(o.x + 28, 310, 28, 38, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 15;
+                ctx.strokeStyle = '#fcd34d';
+                ctx.lineWidth = 2.5;
+                const crackPhase = Math.sin(o.animPhase) * 2;
+                ctx.beginPath();
+                ctx.moveTo(o.x + 18 + crackPhase, 290);
+                ctx.lineTo(o.x + 32, 308);
+                ctx.lineTo(o.x + 24 + crackPhase * 0.5, 328);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(o.x + 38, 296);
+                ctx.lineTo(o.x + 22 + crackPhase * 0.3, 306);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                ctx.beginPath();
+                ctx.ellipse(o.x + 18, 290, 8, 14, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                labelX = o.x + 28;
+                labelY = 375;
+                labelText = '🥚 EGG';
+                labelW = 60;
+
+            } else if (o.type === 'gas') {
+                const grad = ctx.createLinearGradient(o.x, 250, o.x + 46, 370);
+                grad.addColorStop(0, '#ef4444');
+                grad.addColorStop(0.4, '#f97316');
+                grad.addColorStop(0.7, '#dc2626');
+                grad.addColorStop(1, '#991b1b');
+                ctx.fillStyle = grad;
+                ctx.shadowColor = '#f97316';
+                ctx.shadowBlur = 30;
+                ctx.beginPath();
+                ctx.roundRect(o.x + 6, 265, 36, 105, 5);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(o.x + 24, 288);
+                const wave = Math.sin(o.animPhase * 0.5) * 6;
+                ctx.quadraticCurveTo(o.x + 48 + wave, 268, o.x + 46 + wave * 0.5, 248);
+                ctx.stroke();
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(o.x + 44 + wave * 0.5, 244, 10, 8);
+                ctx.fillStyle = '#facc15';
+                ctx.shadowColor = '#facc15';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(o.x + 48 + wave * 0.5, 248, 4, 4);
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(o.x + 10, 276, 28, 22);
+                ctx.fillStyle = '#4ade80';
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = '#4ade80';
+                ctx.shadowBlur = 8;
+                ctx.fillText('$4.20', o.x + 24, 287);
+                ctx.shadowBlur = 0;
+                labelX = o.x + 24;
+                labelY = 375;
+                labelText = '⛽ GAS';
+                labelW = 60;
+
+            } else if (o.type === 'fake') {
+                const pulse = 0.8 + Math.sin(o.animPhase) * 0.2;
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 40 * pulse;
+                const grad = ctx.createRadialGradient(o.x + 20, 300, 6, o.x + 28, 310, 32 * pulse);
+                grad.addColorStop(0, '#fca5a5');
+                grad.addColorStop(0.4, '#ef4444');
+                grad.addColorStop(1, '#991b1b');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(o.x + 28, 310, 28 * pulse, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#dc2626';
+                const spikeCount = 8;
+                for (let i = 0; i < spikeCount; i++) {
+                    const angle = (i / spikeCount) * Math.PI * 2 + o.animPhase * 0.5;
+                    const r = 28 * pulse;
+                    ctx.beginPath();
+                    ctx.moveTo(o.x + 28 + Math.cos(angle) * r, 310 + Math.sin(angle) * r);
+                    ctx.lineTo(o.x + 28 + Math.cos(angle - 0.2) * (r + 10 * pulse), 310 + Math.sin(angle - 0.2) * (r + 10 * pulse));
+                    ctx.lineTo(o.x + 28 + Math.cos(angle + 0.2) * (r + 10 * pulse), 310 + Math.sin(angle + 0.2) * (r + 10 * pulse));
+                    ctx.fill();
+                }
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                const eyeOff = 8 * pulse;
+                ctx.beginPath();
+                ctx.moveTo(o.x + 18, 302 - eyeOff);
+                ctx.lineTo(o.x + 28, 312 - eyeOff);
+                ctx.moveTo(o.x + 28, 302 - eyeOff);
+                ctx.lineTo(o.x + 18, 312 - eyeOff);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(o.x + 30, 302 - eyeOff);
+                ctx.lineTo(o.x + 40, 312 - eyeOff);
+                ctx.moveTo(o.x + 40, 302 - eyeOff);
+                ctx.lineTo(o.x + 30, 312 - eyeOff);
+                ctx.stroke();
+                // подпись
+                labelX = o.x + 28;
+                labelY = 375;
+                labelText = Math.random() > 0.85 ? '⚠️ SCAM' : '❌ FAKE';
+                labelW = 80;
+
+            } else if (o.type === 'rock') {
+                const grad = ctx.createRadialGradient(o.x + 20, 310, 10, o.x + 28, 320, 30);
+                grad.addColorStop(0, '#94a3b8');
+                grad.addColorStop(0.5, '#64748b');
+                grad.addColorStop(1, '#334155');
+                ctx.fillStyle = grad;
+                ctx.shadowColor = '#94a3b8';
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.ellipse(o.x + 28, 320, 26, 22, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(o.x + 16, 318);
+                ctx.lineTo(o.x + 28, 310);
+                ctx.lineTo(o.x + 38, 316);
+                ctx.stroke();
+                labelX = o.x + 28;
+                labelY = 375;
+                labelText = '🪨 ROCK';
+                labelW = 70;
+
+            } else if (o.type === 'log') {
+                const grad = ctx.createLinearGradient(o.x, 310, o.x + 70, 330);
+                grad.addColorStop(0, '#92400e');
+                grad.addColorStop(0.3, '#d97706');
+                grad.addColorStop(0.7, '#b45309');
+                grad.addColorStop(1, '#78350f');
+                ctx.fillStyle = grad;
+                ctx.shadowColor = '#b45309';
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.roundRect(o.x + 4, 315, 62, 28, 14);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.arc(o.x + 34, 328, 6 + i * 4, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                labelX = o.x + 34;
+                labelY = 375;
+                labelText = '🪵 LOG';
+                labelW = 60;
+
+            } else if (o.type === 'trap') {
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 25;
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.roundRect(o.x + 4, 330, 48, 25, 4);
+                ctx.fill();
+                ctx.fillStyle = '#dc2626';
+                const spikePhase = Math.sin(o.animPhase) * 3;
+                for (let i = 0; i < 5; i++) {
+                    const sx = o.x + 8 + i * 10 + spikePhase * 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(sx, 330);
+                    ctx.lineTo(sx + 5, 318 + Math.sin(o.animPhase + i) * 3);
+                    ctx.lineTo(sx + 10, 330);
+                    ctx.fill();
+                }
+                ctx.shadowBlur = 0;
+                labelX = o.x + 28;
+                labelY = 375;
+                labelText = '⚠️ TRAP';
+                labelW = 70;
+            }
+
+            // ── ОТРИСОВКА ПОДПИСИ (теперь с фоном и крупным шрифтом) ──
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            const text = labelText;
+            const tx = labelX;
+            const ty = labelY;
+            const tw = labelW || 70;
+
+            // Фон для текста (чёрный полупрозрачный)
+            ctx.fillStyle = 'rgba(0,0,0,0.75)';
+            ctx.beginPath();
+            ctx.roundRect(tx - tw/2 - 6, ty - 18, tw + 12, 24, 6);
+            ctx.fill();
+
+            // Ободок (цветной)
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(tx - tw/2 - 6, ty - 18, tw + 12, 24, 6);
+            ctx.stroke();
+
+            // Текст
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 4;
+            ctx.fillText(text, tx, ty);
+            ctx.shadowBlur = 0;
+
+            ctx.restore();
+        }
+
+        // ─── ROUND RECT POLYFILL ──────────────────────────────
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (r > w / 2) r = w / 2;
+                if (r > h / 2) r = h / 2;
+                this.moveTo(x + r, y);
+                this.lineTo(x + w - r, y);
+                this.quadraticCurveTo(x + w, y, x + w, y + r);
+                this.lineTo(x + w, y + h - r);
+                this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                this.lineTo(x + r, y + h);
+                this.quadraticCurveTo(x, y + h, x, y + h - r);
+                this.lineTo(x, y + r);
+                this.quadraticCurveTo(x, y, x + r, y);
+                return this;
+            };
+        }
+
+        // ─── LOOP ──────────────────────────────────────────────
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+        loop();
+
+        // ─── EVENTS ────────────────────────────────────────────
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                performJump();
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            performJump();
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            performJump();
+        }, { passive: false });
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            resetGame();
+        });
+
+        // ─── WINDOW RESIZE ──────────────────────────────────────
+        function resizeCanvas() {
+            const wrapper = canvas.parentElement;
+            const maxWidth = wrapper.clientWidth;
+            if (maxWidth < 1000) {
+                canvas.style.width = maxWidth + 'px';
+                canvas.style.height = (maxWidth * 420 / 1000) + 'px';
+            } else {
+                canvas.style.width = '1000px';
+                canvas.style.height = '420px';
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 50);
+    </script>
+</body>
+</html>
