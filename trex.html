@@ -1,0 +1,226 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rexy Badge Quest 🦖 | TREX Chain</title>
+    <style>
+        body { margin:0; padding:0; background:#0a1428; color:#e0f0ff; font-family:Arial, sans-serif; text-align:center; overflow:hidden; }
+        canvas { border:5px solid #22c55e; background:#1e3a2f; margin:20px auto; display:block; max-width:100%; }
+        h1 { margin:15px 0 5px; color:#22c55e; font-size:32px; }
+        #info { font-size:24px; margin:10px; font-weight:bold; }
+        button { padding:14px 32px; font-size:20px; background:#22c55e; color:#0f172a; border:none; border-radius:12px; cursor:pointer; margin-top:10px; font-weight:bold; }
+    </style>
+</head>
+<body>
+    <h1>🦖 Rexy Badge Quest</h1>
+    <div id="info">Score: <span id="score">0</span> | Best: <span id="highscore">0</span></div>
+    <canvas id="game" width="1000" height="420"></canvas>
+    <p>Space / ↑ — Jump (Double Jump in air)<br>Collect glowing Badges!</p>
+    <button onclick="location.reload()">Play Again</button>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const highscoreEl = document.getElementById('highscore');
+
+        let dinoY = 270, dinoDY = 0, frame = 0;
+        let isInAir = false;
+        let canDoubleJump = true;
+        let score = 0, highscore = localStorage.getItem('trexHigh') || 0;
+        let obstacles = [], badges = [], particles = [];
+        let gameOver = false, started = false;
+        let lastObstacleX = -300;
+
+        highscoreEl.textContent = highscore;
+
+        const dinoImg = new Image();
+        dinoImg.src = 'https://images.imgbox.com/8b/78/uYI08rGv_o.png';
+
+        const badgeList = [
+            {text:"GRAND TRADER", color:"#fcd34d", value:200},
+            {text:"DIAMOND HAND", color:"#fb923c", value:180},
+            {text:"LIMITLESS", color:"#c084fc", value:160},
+            {text:"REXY HOLDER", color:"#4ade80", value:140},
+            {text:"EARLY BIRD", color:"#67e8f9", value:120}
+        ];
+
+        function spawnObstacle() {
+            if (Math.random() < 0.023 && (1000 - lastObstacleX) > 270) {
+                obstacles.push({x: 1050, type: ['cactus','egg','fake','gas'][Math.floor(Math.random()*4)]});
+                lastObstacleX = 1050;
+            }
+        }
+
+        function spawnBadge() {
+            if (Math.random() < 0.048) {
+                const b = badgeList[Math.floor(Math.random() * badgeList.length)];
+                badges.push({x: 1050, y: 125 + Math.random() * 180, ...b});
+            }
+        }
+
+        function update() {
+            if (!started || gameOver) return;
+
+            score++;
+            scoreEl.textContent = Math.floor(score / 2.5);
+            frame++;
+
+            dinoDY += 1.32;
+            dinoY += dinoDY;
+
+            if (dinoY >= 270) {
+                dinoY = 270;
+                dinoDY = 0;
+                isInAir = false;
+                canDoubleJump = true;
+            }
+
+            // Obstacles (смягчённый collision)
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].x -= 7;
+                let o = obstacles[i];
+                if (o.x < 180 && o.x > 40 && dinoY + 88 > 282) {
+                    gameOver = true;
+                    if (score > highscore) {
+                        highscore = Math.floor(score / 2.5);
+                        localStorage.setItem('trexHigh', highscore);
+                        highscoreEl.textContent = highscore;
+                    }
+                }
+                if (o.x < -100) obstacles.splice(i, 1);
+            }
+
+            if (obstacles.length) lastObstacleX = obstacles[obstacles.length-1].x;
+
+            // Badges
+            for (let i = badges.length - 1; i >= 0; i--) {
+                let b = badges[i];
+                b.x -= 6.5;
+                if (b.x < 180 && b.x > 25 && Math.abs(dinoY + 48 - b.y) < 80) {
+                    score += b.value;
+                    particles.push({x: b.x + 45, y: b.y - 20, life: 45, value: b.value});
+                    badges.splice(i, 1);
+                }
+                if (b.x < -120) badges.splice(i, 1);
+            }
+
+            spawnObstacle();
+            spawnBadge();
+        }
+
+        function drawObstacle(o) {
+            if (o.type === 'cactus') {
+                ctx.fillStyle = '#15803d'; ctx.fillRect(o.x+6, 275, 38, 105);
+                ctx.fillRect(o.x, 305, 15, 28); ctx.fillRect(o.x+35, 300, 15, 28);
+                ctx.fillStyle = '#eab308'; ctx.fillRect(o.x+10, 290, 30, 10);
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Arial'; ctx.fillText('CHAIN', o.x+5, 360);
+            } else if (o.type === 'egg') {
+                ctx.fillStyle = '#57534e';
+                ctx.beginPath(); ctx.ellipse(o.x+26, 325, 26, 34, 0, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = '#f87171'; ctx.lineWidth = 5;
+                ctx.beginPath(); ctx.moveTo(o.x+8, 305); ctx.lineTo(o.x+42, 345); ctx.stroke();
+                ctx.fillStyle = '#f87171'; ctx.font = 'bold 14px Arial'; ctx.fillText('OLD EGG', o.x+4, 360);
+            } else if (o.type === 'gas') {
+                ctx.fillStyle = '#f97316'; ctx.fillRect(o.x+6, 250, 40, 130);
+                ctx.fillStyle = '#fef08c'; ctx.fillRect(o.x+12, 260, 10, 18); ctx.fillRect(o.x+25, 275, 10, 18);
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Arial'; ctx.fillText('HIGH GAS', o.x-4, 360);
+            } else {
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath(); ctx.arc(o.x+26, 325, 27, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 26px Arial'; ctx.fillText('✕', o.x+26, 337);
+                ctx.font = 'bold 15px Arial'; ctx.fillText('FAKE', o.x+12, 360);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, 1000, 420);
+
+            // Яркий фон
+            ctx.fillStyle = '#1e3a2f';
+            ctx.fillRect(0, 0, 1000, 420);
+
+            ctx.globalAlpha = 0.09;
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 72px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('TREX_chain', 500, 130);
+            ctx.fillText('Badge Quest', 500, 190);
+            ctx.globalAlpha = 1;
+
+            ctx.fillStyle = '#4ade80';
+            ctx.fillRect(0, 370, 1000, 50);
+
+            ctx.drawImage(dinoImg, 75, dinoY - 40, 100, 135);
+
+            for (let o of obstacles) drawObstacle(o);
+
+            ctx.textAlign = 'center';
+            for (let b of badges) {
+                ctx.shadowColor = b.color;
+                ctx.shadowBlur = 35;
+                ctx.fillStyle = b.color;
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText(b.text, b.x + 48, b.y + 14);
+            }
+            ctx.shadowBlur = 0;
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                ctx.globalAlpha = p.life / 45;
+                ctx.fillStyle = '#fef08c';
+                ctx.font = 'bold 34px Arial';
+                ctx.fillText('+' + p.value, p.x, p.y);
+                p.y -= 2.2;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            ctx.globalAlpha = 1;
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.85)';
+                ctx.fillRect(0,0,1000,420);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 65px Arial';
+                ctx.fillText('GAME OVER', 500, 200);
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === ' ' || e.key === 'ArrowUp') {
+                if (!isInAir) {
+                    dinoDY = -27;
+                    isInAir = true;
+                    canDoubleJump = true;
+                } else if (canDoubleJump) {
+                    dinoDY = -18.5;
+                    canDoubleJump = false;
+                }
+                if (!started) started = true;
+            }
+            if (gameOver) location.reload();
+        });
+
+        canvas.addEventListener('mousedown', () => {
+            if (!isInAir) {
+                dinoDY = -27;
+                isInAir = true;
+                canDoubleJump = true;
+            } else if (canDoubleJump) {
+                dinoDY = -18.5;
+                canDoubleJump = false;
+            }
+            if (!started) started = true;
+            if (gameOver) location.reload();
+        });
+
+        loop();
+    </script>
+</body>
+</html>
